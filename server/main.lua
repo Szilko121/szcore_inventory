@@ -1,3 +1,37 @@
+local function registerSzCoreCallback(name, fn)
+    CreateThread(function()
+        local deadline = GetGameTimer() + 15000
+
+        while GetGameTimer() < deadline do
+            if GetResourceState('szcore') == 'started' then
+                local ok, success, err = pcall(function()
+                    return registerSzCoreCallback(name, fn)
+                end)
+
+                if ok and success ~= false then
+                    return
+                end
+
+                if ok and success == false then
+                    print(('[%s] SzCore callback registration rejected: %s (%s)'):format(
+                        GetCurrentResourceName(),
+                        tostring(name),
+                        tostring(err)
+                    ))
+                    return
+                end
+            end
+
+            Wait(100)
+        end
+
+        print(('[%s] SzCore callback registration timed out: %s'):format(
+            GetCurrentResourceName(),
+            tostring(name)
+        ))
+    end)
+end
+
 local I = { cache = {}, usable = {}, dirty = {}, sourceInventory = {}, saving = {}, loading = {} }
 local netRate={}
 local function netAllowed(src,key,ms)local now=GetGameTimer();netRate[src]=netRate[src] or {};local prev=netRate[src][key] or 0;if now-prev<ms then return false end;netRate[src][key]=now;return true end
@@ -174,7 +208,7 @@ I.registerUsable('water',function(src)local _,id=I.player(src);if not I.remove(i
 I.registerUsable('sandwich',function(src)local _,id=I.player(src);if not I.remove(id,'sandwich',1) then return false end;TriggerClientEvent('szcore_inventory:consume',src,'sandwich');exports.szcore:SetMetadata(src,'hunger',math.min(100,(exports.szcore:GetMetadata(src,'hunger')or 0)+35))end)
 I.registerUsable('weapon_pistol',function(src,item)TriggerClientEvent('szcore_inventory:equipWeapon',src,'WEAPON_PISTOL',tonumber(item.metadata and item.metadata.ammo)or 0)end)
 exports('EnsureInventory',I.ensure);exports('GetPlayerInventory',function(src)local inv=I.player(src);return inv end);exports('GetInventory',I.get);exports('AddItem',I.add);exports('RemoveItem',I.remove);exports('GetItemCount',I.count);exports('GetItemBySlot',I.getSlot);exports('RemoveItemBySlot',I.removeSlot);exports('UpdateItemMetadata',I.updateSlot);exports('MoveItem',I.move);exports('RegisterUsableItem',I.registerUsable);exports('CanCarryItem',I.canCarry);exports('FlushInventory',flush)
-exports.szcore:CreateCallback('szcore_inventory:self',function(source)local inv=I.player(source);return inv end)
+registerSzCoreCallback('szcore_inventory:self',function(source)local inv=I.player(source);return inv end)
 AddEventHandler('szcore:server:playerUnloaded',function(src)local id=I.sourceInventory[src];I.sourceInventory[src]=nil;if id then detached[id]=true;checkpoint();flush(id)end end)
 CreateThread(function()
     MySQL.ready.await();while not exports.szcore:IsReady()do Wait(100)end

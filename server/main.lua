@@ -184,7 +184,19 @@ function I.move(fromId,fromSlot,toId,amount,toSlot)
     if not flushMany(ids) then a.items=beforeA;b.items=beforeB;I.dirty[fromId]=dirtyA;I.dirty[toId]=dirtyB;checkpoint();return false,'database_error' end
     return true,slot
 end
-function I.registerUsable(item,cb)assert(SzCoreItems[item],'invalid item');assert(type(cb)=='function','callback required');I.usable[item]=cb end
+function I.registerUsable(item, cb)
+    if not SzCoreItems[item] then
+        return false, 'invalid_item'
+    end
+
+    local callbackType = type(cb)
+    if callbackType ~= 'function' and callbackType ~= 'table' then
+        return false, ('invalid_callback:%s'):format(callbackType)
+    end
+
+    I.usable[item] = cb
+    return true
+end
 RegisterNetEvent('szcore_inventory:use',function(slot)
     local src=source;if not netAllowed(src,'use',150) then return end
     local inv=I.player(src);slot=tonumber(slot);local e=inv and inv.items[slot]

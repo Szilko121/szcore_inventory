@@ -190,7 +190,10 @@ function I.registerUsable(item, cb)
     end
 
     local callbackType = type(cb)
-    if callbackType ~= 'function' and callbackType ~= 'table' then
+    local isFunctionReference = callbackType == 'table'
+        and rawget(cb, '__cfx_functionReference') ~= nil
+
+    if callbackType ~= 'function' and not isFunctionReference then
         return false, ('invalid_callback:%s'):format(callbackType)
     end
 
